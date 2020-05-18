@@ -55,8 +55,8 @@ execute(PgSock, #connect{opts = #{host := Host} = Opts, stage = connect} = State
     case gen_tcp:connect(Host, Port, SockOpts, Timeout) of
         {ok, Sock} ->
             client_handshake(Sock, PgSock, State, Deadline);
-        {error, Reason} = Error ->
-            {stop, Reason, Error, PgSock}
+        {error, _Reason} = Error ->
+            {stop, normal, Error, PgSock}
     end;
 execute(PgSock, #connect{stage = auth, auth_send = {PacketId, Data}} = St) ->
     ok = epgsql_sock:send(PgSock, PacketId, Data),
@@ -74,7 +74,7 @@ client_handshake(Sock, PgSock, #connect{opts = #{username := Username} = Opts} =
 
     case maybe_ssl(Sock, maps:get(ssl, Opts, false), Opts, PgSock, Deadline) of
         {error, Reason} ->
-            {stop, Reason, {error, Reason}, PgSock};
+            {stop, normal, {error, Reason}, PgSock};
         PgSock1 ->
             Opts2 = ["user", 0, Username, 0],
             Opts3 = case maps:find(database, Opts) of
